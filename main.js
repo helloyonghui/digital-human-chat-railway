@@ -357,22 +357,26 @@
             let connectUrl = String(data.url).replace('/rtc', '').replace(/\/$/, '');
             console.log('[LK] join payload:', { url: data.url, tokenLen: String(data.token||'').length });
     
-            // 预检 /rtc/validate：修复URL转换逻辑
+            // 预检 /rtc/validate：仅对本地服务器进行预检，避免外部LiveKit服务器401错误
             try {
-                // 修复URL转换逻辑：ws->http, wss->https
-                let origin;
-                if (connectUrl.startsWith('wss://')) {
-                    origin = connectUrl.replace(/^wss:\/\//, 'https://');
-                } else if (connectUrl.startsWith('ws://')) {
-                    origin = connectUrl.replace(/^ws:\/\//, 'http://');
+                // 只对本地或同域服务器进行预检
+                if (connectUrl.includes(location.hostname) || connectUrl.includes('localhost') || connectUrl.includes('127.0.0.1')) {
+                    let origin;
+                    if (connectUrl.startsWith('wss://')) {
+                        origin = connectUrl.replace(/^wss:\/\//, 'https://');
+                    } else if (connectUrl.startsWith('ws://')) {
+                        origin = connectUrl.replace(/^ws:\/\//, 'http://');
+                    } else {
+                        origin = connectUrl;
+                    }
+                    const v = await fetch(`${origin}/rtc/validate`, { method: 'GET', cache: 'no-store' });
+                    console.log('[LK] /rtc/validate status:', v.status);
                 } else {
-                    origin = connectUrl; // 如果已经是http/https，直接使用
+                    console.log('[LK] 跳过外部LiveKit服务器的预检，直接连接');
                 }
-                const v = await fetch(`${origin}/rtc/validate`, { method: 'GET', cache: 'no-store' });
-                console.log('[LK] /rtc/validate status:', v.status);
             } catch (e) {
                 console.warn('[LK] /rtc/validate 预检失败（可能被重置）', e);
-                showCenterPrompt('信令预检失败（可能是反代或上游问题）', { variant:'warn', showSpinner:false });
+                // 不显示错误提示，因为外部LiveKit服务器可能不支持此接口
             }
             
             // try {
