@@ -357,27 +357,8 @@
             let connectUrl = String(data.url).replace('/rtc', '').replace(/\/$/, '');
             console.log('[LK] join payload:', { url: data.url, tokenLen: String(data.token||'').length });
     
-            // 预检 /rtc/validate：仅对本地服务器进行预检，避免外部LiveKit服务器401错误
-            try {
-                // 只对本地或同域服务器进行预检
-                if (connectUrl.includes(location.hostname) || connectUrl.includes('localhost') || connectUrl.includes('127.0.0.1')) {
-                    let origin;
-                    if (connectUrl.startsWith('wss://')) {
-                        origin = connectUrl.replace(/^wss:\/\//, 'https://');
-                    } else if (connectUrl.startsWith('ws://')) {
-                        origin = connectUrl.replace(/^ws:\/\//, 'http://');
-                    } else {
-                        origin = connectUrl;
-                    }
-                    const v = await fetch(`${origin}/rtc/validate`, { method: 'GET', cache: 'no-store' });
-                    console.log('[LK] /rtc/validate status:', v.status);
-                } else {
-                    console.log('[LK] 跳过外部LiveKit服务器的预检，直接连接');
-                }
-            } catch (e) {
-                console.warn('[LK] /rtc/validate 预检失败（可能被重置）', e);
-                // 不显示错误提示，因为外部LiveKit服务器可能不支持此接口
-            }
+            // 完全跳过 /rtc/validate 预检，避免外部LiveKit服务器401错误
+            console.log('[LK] 跳过 /rtc/validate 预检，直接连接LiveKit服务器');
             
             // try {
             //     video.style.display = 'block';
