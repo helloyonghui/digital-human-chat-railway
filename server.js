@@ -176,8 +176,13 @@ app.get('/lk/join', async (req, res) => {
 
 // LiveKit停止接口
 app.post('/lk/stop', (req, res) => {
-    console.log('LiveKit stop request received');
-    res.json({ status: 'stopped' });
+    try {
+        console.log('LiveKit stop request received');
+        res.json({ status: 'stopped' });
+    } catch (error) {
+        console.error('Error in /lk/stop:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
 });
 
 // RTC验证接口

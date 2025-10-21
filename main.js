@@ -613,15 +613,18 @@
             if (stopSent) return;
             stopSent = true;
             try {
-                if (navigator.sendBeacon) {
-                    // sendBeacon 必须带数据体，给一个空 blob
-                    const blob = new Blob([], { type: 'application/octet-stream' });
-                    navigator.sendBeacon('/lk/stop', blob);
-                } else {
-                    await fetch('/lk/stop', { method: 'POST', cache: 'no-store', keepalive: true });
-                }
+                // 简化停止请求，避免sendBeacon可能的兼容性问题
+                await fetch('/lk/stop', { 
+                    method: 'POST', 
+                    cache: 'no-store', 
+                    keepalive: true,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                });
             } catch(e) {
-                try { await fetch('/lk/stop', { method: 'POST', cache: 'no-store', keepalive: true }); } catch(_) {}
+                console.log('Stop request failed (expected during page unload):', e.message);
             }
         }
         // 页面被卸载或进入 bfcache（更可靠）
@@ -638,7 +641,18 @@
         hideCenterPrompt();
         if (callBtn) callBtn.disabled = true;
         stopCallResetOnly();
-        try { fetch('/lk/stop', { method: 'POST', cache: 'no-store' }).catch(()=>{}); } catch(e) {}
+        try { 
+            fetch('/lk/stop', { 
+                method: 'POST', 
+                cache: 'no-store',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({})
+            }).catch(e => console.log('Stop request failed:', e.message)); 
+        } catch(e) {
+            console.log('Stop request error:', e.message);
+        }
         state = SessionState.IDLE; 
         // 更新：停止后重新加载并显示模板面板（避免按钮保持禁用）
         if (window.TemplateSelector) window.TemplateSelector.loadAndShow();
