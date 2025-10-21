@@ -360,6 +360,9 @@
             // 完全跳过 /rtc/validate 预检，避免外部LiveKit服务器401错误
             console.log('[LK] 跳过 /rtc/validate 预检，直接连接LiveKit服务器');
             
+            // 添加版本标识，确保代码更新生效
+            console.log('[LK] 代码版本: 2025-01-21-v2 - 401/500错误修复版本');
+            
             // try {
             //     video.style.display = 'block';
             //     video.style.width = '100%';

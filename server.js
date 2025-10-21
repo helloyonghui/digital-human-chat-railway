@@ -231,11 +231,16 @@ app.post('/templates/select', (req, res) => {
     });
 });
 
-// 静态文件服务
+// 静态文件服务（添加强制无缓存头）
 app.use('/static', express.static(path.join(__dirname), {
-    maxAge: '1d',
-    etag: true,
-    lastModified: true
+    maxAge: 0,
+    etag: false,
+    lastModified: false,
+    setHeaders: (res, path) => {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+    }
 }));
 
 // 主页路由
