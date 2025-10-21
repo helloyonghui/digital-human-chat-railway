@@ -4,6 +4,7 @@ const helmet = require('helmet');
 const compression = require('compression');
 const path = require('path');
 const fs = require('fs');
+const { AccessToken } = require('livekit-server-sdk');
 require('dotenv').config();
 
 const app = express();
@@ -72,38 +73,104 @@ app.get('/health', (req, res) => {
 // LiveKit相关API
 app.get('/api/livekit/join', async (req, res) => {
     try {
-        // 这里需要根据实际的LiveKit配置生成token
-        // 暂时返回模拟数据，实际部署时需要配置真实的LiveKit服务
-        const mockResponse = {
+        const { room, identity } = req.query;
+        const roomName = room || process.env.LIVEKIT_ROOM || 'digital-human-room';
+        const participantName = identity || 'user-' + Date.now();
+        
+        // Check if we have the required LiveKit credentials
+        if (!process.env.LIVEKIT_API_KEY || !process.env.LIVEKIT_API_SECRET) {
+            console.error('Missing LiveKit credentials');
+            return res.status(500).json({ 
+                error: 'LiveKit credentials not configured',
+                message: 'Please set LIVEKIT_API_KEY and LIVEKIT_API_SECRET environment variables'
+            });
+        }
+
+        // Generate a proper LiveKit access token
+        const token = new AccessToken(
+            process.env.LIVEKIT_API_KEY,
+            process.env.LIVEKIT_API_SECRET,
+            {
+                identity: participantName,
+                ttl: '10m', // Token valid for 10 minutes
+            }
+        );
+
+        // Grant permissions
+        token.addGrant({
+            room: roomName,
+            roomJoin: true,
+            canPublish: true,
+            canSubscribe: true,
+            canPublishData: true,
+        });
+
+        const jwt = await token.toJwt();
+        
+        const response = {
             url: process.env.LIVEKIT_WS_URL || 'wss://your-livekit-server.livekit.cloud',
-            token: 'mock-token-for-development',
-            room: 'digital-human-room',
-            participant: 'user-' + Date.now()
+            token: jwt,
+            room: roomName,
+            participant: participantName
         };
         
-        console.log('LiveKit join request:', mockResponse);
-        res.json(mockResponse);
+        console.log('LiveKit join request:', { ...response, token: 'jwt-token-generated' });
+        res.json(response);
     } catch (error) {
         console.error('LiveKit join error:', error);
-        res.status(500).json({ error: 'Failed to join LiveKit room' });
+        res.status(500).json({ error: 'Failed to join LiveKit room', details: error.message });
     }
 });
 
 // 备用LiveKit接口
 app.get('/lk/join', async (req, res) => {
     try {
-        const mockResponse = {
+        const { room, identity } = req.query;
+        const roomName = room || process.env.LIVEKIT_ROOM || 'digital-human-room';
+        const participantName = identity || 'user-' + Date.now();
+        
+        // Check if we have the required LiveKit credentials
+        if (!process.env.LIVEKIT_API_KEY || !process.env.LIVEKIT_API_SECRET) {
+            console.error('Missing LiveKit credentials');
+            return res.status(500).json({ 
+                error: 'LiveKit credentials not configured',
+                message: 'Please set LIVEKIT_API_KEY and LIVEKIT_API_SECRET environment variables'
+            });
+        }
+
+        // Generate a proper LiveKit access token
+        const token = new AccessToken(
+            process.env.LIVEKIT_API_KEY,
+            process.env.LIVEKIT_API_SECRET,
+            {
+                identity: participantName,
+                ttl: '10m', // Token valid for 10 minutes
+            }
+        );
+
+        // Grant permissions
+        token.addGrant({
+            room: roomName,
+            roomJoin: true,
+            canPublish: true,
+            canSubscribe: true,
+            canPublishData: true,
+        });
+
+        const jwt = await token.toJwt();
+        
+        const response = {
             url: process.env.LIVEKIT_WS_URL || 'wss://your-livekit-server.livekit.cloud',
-            token: 'mock-token-for-development',
-            room: 'digital-human-room',
-            participant: 'user-' + Date.now()
+            token: jwt,
+            room: roomName,
+            participant: participantName
         };
         
-        console.log('LiveKit join request (backup):', mockResponse);
-        res.json(mockResponse);
+        console.log('LiveKit join request (backup):', { ...response, token: 'jwt-token-generated' });
+        res.json(response);
     } catch (error) {
         console.error('LiveKit join error (backup):', error);
-        res.status(500).json({ error: 'Failed to join LiveKit room' });
+        res.status(500).json({ error: 'Failed to join LiveKit room', details: error.message });
     }
 });
 
