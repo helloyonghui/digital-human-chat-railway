@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiveKit连接测试</title>
+    <script src="https://unpkg.com/livekit-client@2.5.7/dist/livekit-client.umd.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .log { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 4px; max-height: 300px; overflow-y: auto; }
+        button { padding: 10px 20px; margin: 5px; }
+        .status { padding: 5px 10px; border-radius: 3px; margin: 5px 0; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>LiveKit连接测试</h1>
+    
+    <div>
+        <button onclick="testConnection()">测试LiveKit连接</button>
+        <button onclick="clearLog()">清空日志</button>
+    </div>
+    
+    <div id="status"></div>
+    <div id="log" class="log"></div>
+    
+    <script>
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `<div class="${type}">[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(`[${type}] ${message}`);
+        }
+        
+        function setStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+        
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+            document.getElementById('status').innerHTML = '';
+        }
+        
+        async function testConnection() {
+            try {
+                setStatus('开始测试LiveKit连接...', 'info');
+                log('开始LiveKit连接测试');
+                
+                // 1. 获取连接token
+                log('步骤1: 获取LiveKit连接token');
+                const response = await fetch('/lk/join', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        roomName: 'test-room-' + Date.now(),
+                        participantName: 'test-user-' + Date.now()
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                log(`获取token成功: ${JSON.stringify(data, null, 2)}`, 'success');
+                
+                // 2. 创建LiveKit房间
+                log('步骤2: 创建LiveKit房间连接');
+                const room = new LiveKit.Room({
+                    adaptiveStream: true,
+                    dynacast: true,
+                });
+                
+                // 3. 设置事件监听器
+                room.on(LiveKit.RoomEvent.Connected, () => {
+                    log('✅ LiveKit房间连接成功!', 'success');
+                    setStatus('LiveKit连接成功!', 'success');
+                });
+                
+                room.on(LiveKit.RoomEvent.Disconnected, (reason) => {
+                    log(`❌ LiveKit房间断开连接: ${reason}`, 'error');
+                    setStatus('LiveKit连接断开', 'error');
+                });
+                
+                room.on(LiveKit.RoomEvent.ConnectionFailed, (error) => {
+                    log(`❌ LiveKit连接失败: ${error.message}`, 'error');
+                    setStatus('LiveKit连接失败', 'error');
+                });
+                
+                room.on(LiveKit.RoomEvent.ParticipantConnected, (participant) => {
+                    log(`👤 参与者加入: ${participant.identity}`, 'info');
+                });
+                
+                room.on(LiveKit.RoomEvent.TrackSubscribed, (track, publication, participant) => {
+                    log(`🎥 订阅到轨道: ${track.kind} from ${participant.identity}`, 'success');
+                });
+                
+                // 4. 尝试连接
+                log(`步骤3: 连接到LiveKit服务器 ${data.wsUrl}`);
+                await room.connect(data.wsUrl, data.token);
+                
+                log('✅ 所有测试步骤完成!', 'success');
+                
+                // 5. 延迟断开连接
+                setTimeout(() => {
+                    log('断开连接...');
+                    room.disconnect();
+                }, 5000);
+                
+            } catch (error) {
+                log(`❌ 测试失败: ${error.message}`, 'error');
+                setStatus(`测试失败: ${error.message}`, 'error');
+                console.error('LiveKit测试错误:', error);
+            }
+        }
+        
+        // 页面加载完成后自动运行测试
+        window.addEventListener('load', () => {
+            log('LiveKit连接测试页面已加载');
+            log('点击"测试LiveKit连接"按钮开始测试');
+        });
+    </script>
+</body>
+</html>
