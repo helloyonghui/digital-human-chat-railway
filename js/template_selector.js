@@ -138,7 +138,7 @@
                         options.onSelect(templateId);
                     }
                     // 异步通知后端切换模板（不阻塞前端跳转）
-                    fetch('/templates/select', {
+                    fetch(`${window.location.origin}/templates/select`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ templateId: templateId })
@@ -163,14 +163,14 @@
     async function loadTemplates(){
         try {
             setLoading(true);
-            const resp = await fetch('/templates', { method: 'GET', cache: 'no-store' });
+            const resp = await fetch(`${window.location.origin}/templates`, { method: 'GET', cache: 'no-store' });
             const data = await resp.json();
             let { templates, current } = normalizeTemplatesPayload(data);
 
             // 若当前模板未提供，额外尝试获取 /templates/current
             if (!current) {
                 try {
-                    const r2 = await fetch('/templates/current', { method:'GET', cache:'no-store' });
+                    const r2 = await fetch(`${window.location.origin}/templates/current`, { method:'GET', cache:'no-store' });
                     if (r2.ok) {
                         const j2 = await r2.json();
                         current = j2?.current_template || current || null;

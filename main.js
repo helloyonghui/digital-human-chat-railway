@@ -868,7 +868,7 @@
     // 加载模板列表
     async function loadTemplates() {
         try {
-            const response = await fetch('/templates');
+            const response = await fetch(`${window.location.origin}/templates`);
             if (response.ok) {
                 availableTemplates = await response.json();
                 console.log('[Templates] Loaded templates:', availableTemplates);
@@ -947,7 +947,7 @@
         try {
             showCenterPrompt('正在切换模板...', { showSpinner: true });
             
-            const response = await fetch('/templates/select', {
+            const response = await fetch(`${window.location.origin}/templates/select`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -1027,7 +1027,7 @@
     // 获取当前模板
     async function getCurrentTemplate() {
         try {
-            const response = await fetch('/templates/current');
+            const response = await fetch(`${window.location.origin}/templates/current`);
             if (response.ok) {
                 currentTemplate = await response.json();
                 console.log('[Templates] Current template:', currentTemplate);
