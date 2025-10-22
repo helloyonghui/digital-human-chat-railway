@@ -1,0 +1,14 @@
+{
+    "xinyao0319":{
+        "prompt": "bank_expert_prompt",
+        "voice_id":"zf_001"
+    },
+    "kwn_003":{
+        "prompt": "live_streaming_prompt",
+        "voice_id":"zf_001"
+    },
+    "kwn_004":{
+        "prompt": "ecommerce_live_expert_prompt",
+        "voice_id":"zf_001"
+    }
+}

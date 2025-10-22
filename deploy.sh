@@ -40,7 +40,7 @@ while IFS='=' read -r key value; do
     
     if [[ -n $value ]]; then
         echo "设置 $key..."
-        railway variables set "$key=$value"
+        railway variables --set "$key=$value"
     fi
 done < .env
 

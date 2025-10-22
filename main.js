@@ -18,6 +18,7 @@
     const sendBtn = document.getElementById('sendBtn');
     const textInputBar = document.getElementById('textInputBar');
     const audioOverlay = document.getElementById('audioOverlay');
+    const templateSelector = document.getElementById('templateGrid');
 
     // LiveKit UMD 兼容：将全局 LivekitClient 映射为 LiveKit
     if (!window.LiveKit && window.LivekitClient) {
@@ -324,10 +325,15 @@
         } catch (e) { console.warn('切换麦克风失败', e); }
     }
 
-    // ---- LiveKit-only：连接与发布 ----
+    // ---- LiveKit-only：连接与发布 ---- 增强版
     async function startCallLiveKitOnly(){
         try {
             showCenterPrompt('正在连接...', { showSpinner:true });
+            
+            // 生成房间和参与者名称
+            const roomName = 'digital-human-room-' + Date.now();
+            const participantName = 'user-' + Date.now();
+            
             let joinURL = (typeof window.JOIN_ENDPOINT === 'string' && window.JOIN_ENDPOINT) ? window.JOIN_ENDPOINT : null;
             if (!joinURL) {
                 const path = location.pathname || '';
@@ -340,47 +346,154 @@
             
             let resp;
             try {
-                resp = await fetch(joinURL, { cache: 'no-store' });
+                // 使用POST方法发送请求，包含房间和参与者信息
+                resp = await fetch(joinURL, { 
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        roomName: roomName,
+                        participantName: participantName
+                    }),
+                    cache: 'no-store' 
+                });
                 if (!resp.ok) throw new Error(`join failed: ${resp.status}`);
             } catch (e) {
                 // 自动回退：如果首选失败，尝试另一路径
                 const alt = joinURL === '/lk/join' ? '/api/livekit/join' : '/lk/join';
                 try {
-                    resp = await fetch(alt, { cache: 'no-store' });
+                    resp = await fetch(alt, { 
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            roomName: roomName,
+                            participantName: participantName
+                        }),
+                        cache: 'no-store' 
+                    });
                 } catch(_) {}
             }
             
             const data = (resp && resp.ok) ? await resp.json() : null;
-            if (!data || !data.url || !data.token) throw new Error('加入失败：无效令牌');
+            if (!data || !data.success || !data.wsUrl || !data.token) {
+                throw new Error('加入失败：无效令牌或服务器响应');
+            }
     
-            // 统一移除 /rtc（后端也会处理，此处双保险）
-            let connectUrl = String(data.url).replace('/rtc', '').replace(/\/$/, '');
-            console.log('[LK] join payload:', { url: data.url, tokenLen: String(data.token||'').length });
+            // 使用服务器返回的wsUrl
+            let connectUrl = data.wsUrl;
+            console.log('[LK] join payload:', { url: connectUrl, tokenLen: String(data.token||'').length });
     
             // 完全跳过 /rtc/validate 预检，避免外部LiveKit服务器401错误
             console.log('[LK] 跳过 /rtc/validate 预检，直接连接LiveKit服务器');
             
             // 添加版本标识，确保代码更新生效
-            console.log('[LK] 代码版本: 2025-01-21-v2 - 401/500错误修复版本');
+            console.log('[LK] 代码版本: 2025-01-21-v3 - 增强连接和重连机制');
+
+            const roomOptions = { 
+                adaptiveStream: data.config?.adaptiveStream || false, 
+                dynacast: data.config?.dynacast || false,
+                publishDefaults: data.config?.publishDefaults || {
+                    // 仅发布 720p 层，避免订阅到低层
+                    videoSimulcastLayers: [LiveKit.VideoPresets.h720],
+                },
+                subscribeDefaults: {
+                    // 默认订阅最高质量
+                    videoQuality: LiveKit.VideoQuality.HIGH,
+                },
+                // 添加重连配置
+                reconnectPolicy: {
+                    nextRetryDelayInMs: (context) => {
+                        console.log(`[LK] Reconnect attempt ${context.retryCount}, delay: ${Math.min(1000 * Math.pow(2, context.retryCount), 10000)}ms`);
+                        return Math.min(1000 * Math.pow(2, context.retryCount), 10000);
+                    },
+                    maxRetryCount: 5
+                }
+            };
             
-            // try {
-            //     video.style.display = 'block';
-            //     video.style.width = '100%';
-            //     video.style.height = '100%';
-            // } catch(e) {}
-
-
-            const roomOptions = { adaptiveStream: false, dynacast: false,
-                            publishDefaults: {
-                        // 仅发布 720p 层，避免订阅到低层
-                                    videoSimulcastLayers: [LiveKit.VideoPresets.h720],
-                                },
-                                subscribeDefaults: {
-                                    // 默认订阅最高质量
-                                    videoQuality: LiveKit.VideoQuality.HIGH,
-                                },
-                     };
             room = new LiveKit.Room(roomOptions);
+            
+            // 增强的事件监听
+            room.on(LiveKit.RoomEvent.Connected, () => {
+                console.log('[LK] Connected successfully');
+                state = SessionState.CONNECTED;
+                showCenterPrompt('连接成功', { variant: 'success', duration: 2000 });
+                
+                // 隐藏模板选择面板
+                if (templateSelector) {
+                    templateSelector.style.display = 'none';
+                }
+            });
+
+            room.on(LiveKit.RoomEvent.Disconnected, (reason) => {
+                console.log('[LK] Disconnected:', reason);
+                state = SessionState.DISCONNECTED;
+                showCenterPrompt('连接断开', { variant: 'warn', duration: 3000 });
+                
+                // 延迟重新加载，给用户时间看到状态
+                setTimeout(() => {
+                    location.reload();
+                }, 3000);
+            });
+
+            room.on(LiveKit.RoomEvent.ConnectionStateChanged, (connectionState) => {
+                console.log('[LK] Connection state changed:', connectionState);
+                
+                switch (connectionState) {
+                    case LiveKit.ConnectionState.Connecting:
+                        showCenterPrompt('连接中...', { showSpinner: true });
+                        break;
+                    case LiveKit.ConnectionState.Connected:
+                        showCenterPrompt('已连接', { variant: 'success', duration: 2000 });
+                        break;
+                    case LiveKit.ConnectionState.Reconnecting:
+                        showCenterPrompt('重新连接中...', { showSpinner: true });
+                        break;
+                    case LiveKit.ConnectionState.Disconnected:
+                        showCenterPrompt('连接断开', { variant: 'warn' });
+                        break;
+                }
+            });
+
+            room.on(LiveKit.RoomEvent.ReconnectingChanged, (reconnecting) => {
+                if (reconnecting) {
+                    console.log('[LK] Reconnecting...');
+                    showCenterPrompt('重新连接中...', { showSpinner: true });
+                }
+            });
+
+            room.on(LiveKit.RoomEvent.ReconnectedChanged, (reconnected) => {
+                if (reconnected) {
+                    console.log('[LK] Reconnected successfully');
+                    showCenterPrompt('重新连接成功', { variant: 'success', duration: 2000 });
+                }
+            });
+
+            // 连接失败处理
+            room.on(LiveKit.RoomEvent.ConnectionFailed, (error) => {
+                console.error('[LK] Connection failed:', error);
+                state = SessionState.DISCONNECTED;
+                showCenterPrompt('连接失败，请检查网络', { variant: 'error', duration: 5000 });
+                
+                // 延迟重新加载
+                setTimeout(() => {
+                    location.reload();
+                }, 5000);
+            });
+
+            // room已在上面创建，这里直接继续
+            
+            // 连接到LiveKit服务器
+            try {
+                await room.connect(connectUrl, data.token);
+                console.log('[LK] Successfully connected to LiveKit server');
+            } catch (error) {
+                console.error('[LK] Failed to connect to LiveKit server:', error);
+                throw new Error(`连接LiveKit服务器失败: ${error.message}`);
+            }
+
             room.on(LiveKit.RoomEvent.TrackSubscribed, (track,publication) => {
                 try {
                     
@@ -747,4 +860,238 @@
             updateOverlayPositions();
         });
     }
+
+    // ---- 模板选择增强功能 ----
+    let currentTemplate = null;
+    let availableTemplates = [];
+    
+    // 加载模板列表
+    async function loadTemplates() {
+        try {
+            const response = await fetch('/templates');
+            if (response.ok) {
+                availableTemplates = await response.json();
+                console.log('[Templates] Loaded templates:', availableTemplates);
+                updateTemplateSelector();
+            } else {
+                console.warn('[Templates] Failed to load templates, using default');
+                availableTemplates = [{
+                    id: 'default',
+                    name: '默认助手',
+                    description: '通用数字人助手',
+                    avatar: '/static/avatars/default.jpg',
+                    cover: '/static/covers/default.jpg',
+                    tags: ['通用', '助手']
+                }];
+                updateTemplateSelector();
+            }
+        } catch (error) {
+            console.error('[Templates] Error loading templates:', error);
+            availableTemplates = [{
+                id: 'default',
+                name: '默认助手',
+                description: '通用数字人助手',
+                avatar: '/static/avatars/default.jpg',
+                cover: '/static/covers/default.jpg',
+                tags: ['通用', '助手']
+            }];
+            updateTemplateSelector();
+        }
+    }
+    
+    // 更新模板选择器UI
+    function updateTemplateSelector() {
+        if (!templateSelector) return;
+        
+        // 使用新的模板选择器组件
+        if (window.TemplateSelector && window.TemplateSelector.updateTemplates) {
+            window.TemplateSelector.updateTemplates(availableTemplates);
+        } else {
+            // 兼容旧版本的模板选择器
+            const templateGrid = templateSelector.querySelector('.template-grid') || 
+                               templateSelector.querySelector('.templates-container');
+            
+            if (!templateGrid) {
+                console.warn('[Templates] Template grid not found');
+                return;
+            }
+            
+            templateGrid.innerHTML = '';
+            
+            availableTemplates.forEach(template => {
+                const templateCard = document.createElement('div');
+                templateCard.className = 'template-card';
+                templateCard.innerHTML = `
+                    <div class="template-cover">
+                        <img src="${template.cover || template.avatar || '/static/covers/default.svg'}" 
+                             alt="${template.name}" 
+                             onerror="this.src='/static/covers/default.svg'">
+                    </div>
+                    <div class="template-info">
+                        <h3 class="template-name">${template.name}</h3>
+                        <p class="template-description">${template.description}</p>
+                        <div class="template-tags">
+                            ${(template.tags || []).map(tag => `<span class="tag">${tag}</span>`).join('')}
+                        </div>
+                    </div>
+                `;
+                
+                templateCard.addEventListener('click', () => selectTemplate(template));
+                templateGrid.appendChild(templateCard);
+            });
+        }
+    }
+    
+    // 选择模板
+    async function selectTemplate(template) {
+        try {
+            showCenterPrompt('正在切换模板...', { showSpinner: true });
+            
+            const response = await fetch('/templates/select', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ templateId: template.id })
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                currentTemplate = result.template || template;
+                console.log('[Templates] Selected template:', currentTemplate);
+                
+                // 更新UI显示当前模板
+                updateCurrentTemplateDisplay();
+                
+                showCenterPrompt(`已切换到：${template.name}`, { 
+                    variant: 'success', 
+                    duration: 2000 
+                });
+                
+                // 如果已连接，可以发送模板切换消息
+                if (room && room.state === LiveKit.ConnectionState.Connected) {
+                    try {
+                        const payload = JSON.stringify({ 
+                            message_type: 'template_change', 
+                            template_id: template.id,
+                            template_name: template.name
+                        });
+                        const bytes = new TextEncoder().encode(payload);
+                        await room.localParticipant.publishData(bytes, { reliable: true });
+                    } catch (e) {
+                        console.warn('[Templates] Failed to send template change message:', e);
+                    }
+                }
+            } else {
+                throw new Error(`选择模板失败: ${response.status}`);
+            }
+        } catch (error) {
+            console.error('[Templates] Error selecting template:', error);
+            showCenterPrompt(`模板切换失败: ${error.message}`, { 
+                variant: 'error', 
+                duration: 3000 
+            });
+        }
+    }
+    
+    // 更新当前模板显示
+    function updateCurrentTemplateDisplay() {
+        if (!currentTemplate) return;
+        
+        // 更新当前模板名称显示
+        const currentTemplateName = document.getElementById('currentTemplateName');
+        if (currentTemplateName) {
+            currentTemplateName.textContent = currentTemplate.name || '默认';
+            currentTemplateName.title = currentTemplate.description || '';
+        }
+        
+        // 更新页面标题或其他UI元素
+        const titleElement = document.querySelector('.current-template-name');
+        if (titleElement) {
+            titleElement.textContent = currentTemplate.name;
+        }
+        
+        // 更新头像
+        const avatarElement = document.querySelector('.current-template-avatar');
+        if (avatarElement) {
+            avatarElement.src = currentTemplate.avatar || '/static/covers/default.svg';
+        }
+        
+        // 更新描述
+        const descElement = document.querySelector('.current-template-description');
+        if (descElement) {
+            descElement.textContent = currentTemplate.description;
+        }
+    }
+    
+    // 获取当前模板
+    async function getCurrentTemplate() {
+        try {
+            const response = await fetch('/templates/current');
+            if (response.ok) {
+                currentTemplate = await response.json();
+                console.log('[Templates] Current template:', currentTemplate);
+                updateCurrentTemplateDisplay();
+            }
+        } catch (error) {
+            console.error('[Templates] Error getting current template:', error);
+        }
+    }
+
+    // 显示模板选择器
+    function showTemplateSelector() {
+        if (window.TemplateSelector) {
+            window.TemplateSelector.show();
+        } else if (templateSelector) {
+            templateSelector.style.display = 'flex';
+            templateSelector.setAttribute('aria-hidden', 'false');
+        }
+    }
+    
+    // 隐藏模板选择器
+    function hideTemplateSelector() {
+        if (window.TemplateSelector) {
+            window.TemplateSelector.hide();
+        } else if (templateSelector) {
+            templateSelector.style.display = 'none';
+            templateSelector.setAttribute('aria-hidden', 'true');
+        }
+    }
+
+    // ---- 页面初始化 ----
+    document.addEventListener('DOMContentLoaded', async function() {
+        console.log('[Init] Page loaded, initializing templates...');
+        
+        // 加载模板列表
+        await loadTemplates();
+        
+        // 获取当前模板
+        await getCurrentTemplate();
+        
+        // 添加模板选择按钮事件（如果存在）
+        const templateBtn = document.getElementById('templateBtn') || 
+                           document.querySelector('.template-btn') ||
+                           document.querySelector('[data-action="show-templates"]');
+        
+        if (templateBtn) {
+            templateBtn.addEventListener('click', showTemplateSelector);
+        }
+
+        // 添加键盘快捷键 - T键显示模板选择器
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 't' || e.key === 'T') {
+                if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+                    // 确保不在输入框中
+                    if (document.activeElement.tagName !== 'INPUT' && 
+                        document.activeElement.tagName !== 'TEXTAREA') {
+                        e.preventDefault();
+                        showTemplateSelector();
+                    }
+                }
+            }
+        });
+        
+        console.log('[Init] Template system initialized');
+    });
+
 })();

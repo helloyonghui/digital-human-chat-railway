@@ -1,0 +1,2 @@
+LIVEKIT_URL=wss://motabay.com LIVEKIT_API_KEY=IpUMpIglKgDpCfoy LIVEKIT_API_SECRET=5929581c8a9da6c44b99f105a609981f LIVEKIT_ROOM=dh-stream CLOUD_TEMPLATE_COVERS_DIR=/home/ubuntu/workerspace_2/template_covers CLOUD_TEMPLATE_JSON=/home/ubuntu/workerspace_2/config/template.json CLOUD_PROMPT_JSON=/home/ubuntu/workerspace_2/config/prompt.json \
+python3 cloud_gateway.py --host 0.0.0.0 --port 8080 --enable_https

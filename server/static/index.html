@@ -3,10 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    <title>数字人通话系统</title>
+    <title>通话式数字人播放器</title>
     <link rel="icon" href="data:,">
     <link rel="stylesheet" href="/static/styles.css"/>
 </head>
@@ -67,27 +64,12 @@
             </svg>
         </button>
 
-        <!-- 模板选择按钮 -->
-        <button id="templateBtn" class="template-btn" aria-label="选择数字人角色" title="选择数字人角色 (按T键)">
-            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <path fill="currentColor" d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L15 7V9C15 11.8 12.8 14 10 14S5 11.8 5 9V7L3 7V9C3 12.5 5.6 15.4 9 15.9V18H7V20H17V18H15V15.9C18.4 15.4 21 12.5 21 9Z"/>
-            </svg>
-            <span class="label">角色</span>
-        </button>
-
         <!-- 新增：聆听 HUD（三点动画 + 状态文案），持续显示 -->
         <div id="listenHud" class="listen-hud" aria-live="polite">
             <div class="dots"><span></span><span></span><span></span></div>
             <div id="listenStatus" class="listen-text" role="status" aria-live="polite">聆听中</div>
         </div>
-
-        <!-- 当前模板显示 -->
-        <div id="currentTemplate" class="current-template">
-            <div class="template-info">
-                <span class="template-label">当前角色:</span>
-                <span id="currentTemplateName" class="template-name">默认</span>
-            </div>
-        </div>
+        <!-- 注意：这里原本有 id="loadingHint" 的顶端提示条，现已移除 -->
 
         <!-- 新增：模板选择网格（覆盖式叠层） -->
         <div id="templateGrid" class="template-grid" aria-hidden="true"></div>
@@ -98,6 +80,7 @@
     <script src="/static/js/video_renderer.js"></script>
     <script src="/static/js/recorder/recorder.wav.min.js"></script>
     <script src="/static/lib/livekit-client.umd.min.js"></script>
+    <!-- 新增独立模板选择模块 -->
     <script src="/static/js/template_selector.js"></script>
     <script src="/static/main.js"></script>
 </body>

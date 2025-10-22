@@ -1,0 +1,523 @@
+/* 数字人通话系统 - 现代化样式 */
+
+/* 全局重置和基础样式 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #333;
+    overflow: hidden;
+    height: 100vh;
+    user-select: none;
+}
+
+/* 主舞台容器 */
+.stage {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+}
+
+/* 视频元素 */
+.video, #videoEl {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 0;
+}
+
+#videoCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+}
+
+#videoEl {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 0;
+}
+
+#audioEl {
+    display: none;
+}
+
+/* 音频覆盖层 */
+.audio-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: 500;
+    cursor: pointer;
+    z-index: 10;
+    transition: opacity 0.3s ease;
+}
+
+.audio-overlay:hover {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+/* 退出按钮 */
+.exit-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 48px;
+    height: 48px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    z-index: 20;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.exit-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
+}
+
+/* 打断按钮 */
+.interrupt-btn {
+    position: absolute;
+    top: 20px;
+    right: 80px;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 25px;
+    background: rgba(255, 59, 48, 0.9);
+    backdrop-filter: blur(10px);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    z-index: 20;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.interrupt-btn:hover:not(:disabled) {
+    background: rgba(255, 59, 48, 1);
+    transform: translateY(-2px);
+}
+
+.interrupt-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.interrupt-btn .icon {
+    width: 16px;
+    height: 16px;
+}
+
+/* 麦克风按钮 */
+.mic-btn {
+    position: absolute;
+    top: 20px;
+    right: 200px;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 25px;
+    background: rgba(52, 199, 89, 0.9);
+    backdrop-filter: blur(10px);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    z-index: 20;
+    transition: all 0.3s ease;
+}
+
+.mic-btn:hover {
+    background: rgba(52, 199, 89, 1);
+    transform: translateY(-2px);
+}
+
+.mic-btn.muted {
+    background: rgba(255, 59, 48, 0.9);
+}
+
+.mic-btn.muted:hover {
+    background: rgba(255, 59, 48, 1);
+}
+
+/* 回答文本行 */
+.answer-lines {
+    position: absolute;
+    bottom: 120px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
+    max-width: 800px;
+    z-index: 15;
+}
+
+.answer-lines .line {
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(10px);
+    color: white;
+    padding: 12px 20px;
+    margin: 4px 0;
+    border-radius: 20px;
+    font-size: 16px;
+    line-height: 1.4;
+    text-align: center;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s ease;
+}
+
+.answer-lines .line:not(:empty) {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* STT文本 */
+.stt-text {
+    position: absolute;
+    bottom: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
+    max-width: 800px;
+    background: rgba(0, 122, 255, 0.9);
+    backdrop-filter: blur(10px);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 20px;
+    font-size: 16px;
+    text-align: center;
+    z-index: 15;
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+    transition: all 0.3s ease;
+}
+
+.stt-text:not(:empty) {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* 文本输入栏 */
+.text-input-bar {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 12px;
+    z-index: 15;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    padding: 12px;
+    border-radius: 25px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.text-input-bar input {
+    flex: 1;
+    min-width: 300px;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.9);
+    font-size: 16px;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+.text-input-bar input:focus {
+    background: white;
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.3);
+}
+
+.send-btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 20px;
+    background: #007AFF;
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.send-btn:hover {
+    background: #0056CC;
+    transform: translateY(-2px);
+}
+
+/* 通话按钮 */
+.call-btn {
+    position: absolute;
+    bottom: 50%;
+    left: 50%;
+    transform: translate(-50%, 50%);
+    width: 80px;
+    height: 80px;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 20;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.call-btn.start {
+    background: linear-gradient(135deg, #52C41A, #389E0D);
+    color: white;
+}
+
+.call-btn.start:hover {
+    background: linear-gradient(135deg, #73D13D, #52C41A);
+    transform: translate(-50%, 50%) scale(1.1);
+}
+
+.call-btn.stop {
+    background: linear-gradient(135deg, #FF4D4F, #CF1322);
+    color: white;
+}
+
+.call-btn.stop:hover {
+    background: linear-gradient(135deg, #FF7875, #FF4D4F);
+    transform: translate(-50%, 50%) scale(1.1);
+}
+
+.call-btn .icon {
+    width: 32px;
+    height: 32px;
+}
+
+/* 聆听HUD */
+.listen-hud {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    z-index: 15;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.listen-hud.active {
+    opacity: 1;
+}
+
+.listen-hud .dots {
+    display: flex;
+    gap: 8px;
+}
+
+.listen-hud .dots span {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: white;
+    animation: pulse 1.4s ease-in-out infinite both;
+}
+
+.listen-hud .dots span:nth-child(1) { animation-delay: -0.32s; }
+.listen-hud .dots span:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes pulse {
+    0%, 80%, 100% {
+        transform: scale(0.8);
+        opacity: 0.5;
+    }
+    40% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.listen-text {
+    color: white;
+    font-size: 18px;
+    font-weight: 500;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+/* 当前模板显示 */
+.current-template {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(10px);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    z-index: 20;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.current-template .template-label {
+    opacity: 0.8;
+    margin-right: 8px;
+}
+
+.current-template .template-name {
+    font-weight: 600;
+    color: #00D4FF;
+}
+
+/* 模板选择按钮 */
+.template-btn {
+    position: absolute;
+    bottom: 50%;
+    right: 100px;
+    transform: translateY(50%);
+    padding: 16px 20px;
+    border: none;
+    border-radius: 25px;
+    background: rgba(88, 86, 214, 0.9);
+    backdrop-filter: blur(10px);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    z-index: 20;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 16px rgba(88, 86, 214, 0.3);
+}
+
+.template-btn:hover {
+    background: rgba(88, 86, 214, 1);
+    transform: translateY(50%) translateY(-2px);
+    box-shadow: 0 6px 20px rgba(88, 86, 214, 0.4);
+}
+
+.template-btn .icon {
+    width: 18px;
+    height: 18px;
+}
+
+/* 模板网格 */
+.template-grid {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+    z-index: 30;
+    display: none;
+}
+
+.template-grid[aria-hidden="false"] {
+    display: flex;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .text-input-bar input {
+        min-width: 250px;
+    }
+    
+    .answer-lines, .stt-text {
+        width: 90%;
+    }
+    
+    .interrupt-btn, .mic-btn {
+        padding: 8px 16px;
+        font-size: 12px;
+        right: 20px;
+        top: 80px;
+    }
+    
+    .mic-btn {
+        top: 130px;
+    }
+    
+    .template-btn {
+        right: 20px;
+        bottom: 40%;
+        padding: 12px 16px;
+    }
+    
+    .exit-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .text-input-bar {
+        flex-direction: column;
+        width: 90%;
+    }
+    
+    .text-input-bar input {
+        min-width: auto;
+    }
+    
+    .call-btn {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .call-btn .icon {
+        width: 24px;
+        height: 24px;
+    }
+    
+    .template-btn {
+        right: 20px;
+        bottom: 35%;
+        padding: 10px 14px;
+        font-size: 12px;
+    }
+    
+    .template-btn .icon {
+        width: 16px;
+        height: 16px;
+    }
+    
+    .interrupt-btn, .mic-btn {
+        padding: 6px 12px;
+        font-size: 11px;
+    }
+}

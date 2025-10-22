@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>LiveKit 最小验证</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- 加载 LiveKit UMD 客户端（修复为子目录本地路径） -->
+  <script src="/static/lib/livekit-client.umd.min.js"></script>
+  <style>
+    body { font-family: sans-serif; margin: 24px; }
+    #logs { white-space: pre-wrap; background: #f7f7f7; padding: 12px; border: 1px solid #ddd; height: 200px; overflow: auto; }
+    video { width: 480px; max-width: 100%; background: #000; }
+  </style>
+</head>
+<body>
+  <h2>LiveKit + HTTPS 最小验证</h2>
+  <p>域名应为 <code>https://motabay.com</code> 前端，<code>wss://motabay.com</code> 后端LiveKit。</p>
+
+  <div>
+    <button id="connectBtn">连接房间</button>
+    <button id="publishMicBtn" disabled>发布麦克风</button>
+    <button id="leaveBtn" disabled>离开房间</button>
+  </div>
+
+  <h3>远端视频</h3>
+  <video id="remoteVideo" autoplay playsinline></video>
+  <h3>日志</h3>
+  <div id="logs"></div>
+
+  <script>
+    const logEl = document.getElementById('logs');
+    function log(...args){ console.log(...args); logEl.textContent += args.join(' ') + '\n'; }
+
+    const remoteVideo = document.getElementById('remoteVideo');
+    const connectBtn = document.getElementById('connectBtn');
+    const publishMicBtn = document.getElementById('publishMicBtn');
+    const leaveBtn = document.getElementById('leaveBtn');
+
+    let room = null;
+
+    connectBtn.onclick = async () => {
+      try {
+        connectBtn.disabled = true;
+        log('请求 /lk/join...');
+        const resp = await fetch('/lk/join');
+        const data = await resp.json();
+        if (!data || !data.url || !data.token) throw new Error('lk/join 返回无效');
+
+        log('连接 LiveKit:', data.url);
+        room = new window.LivekitClient.Room({
+          adaptiveStream: true,
+          dynacast: true,
+        });
+
+        room.on('trackSubscribed', (track, publication, participant) => {
+          log('trackSubscribed:', track.kind, 'from', participant.identity);
+          if (track.kind === 'video') {
+            const el = track.attach();
+            remoteVideo.srcObject = el.srcObject;
+          } else if (track.kind === 'audio') {
+            const el = track.attach();
+            document.body.appendChild(el); // 播放远端音频
+          }
+        });
+
+        await room.connect(data.url, data.token);
+        log('已连接到房间:', data.room);
+        publishMicBtn.disabled = false;
+        leaveBtn.disabled = true; // 先发布音频再允许离开
+        leaveBtn.disabled = false;
+      } catch (e) {
+        log('连接失败:', e.message || e);
+        connectBtn.disabled = false;
+      }
+    };
+
+    publishMicBtn.onclick = async () => {
+      try {
+        if (!room) return;
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const [audioTrack] = stream.getAudioTracks();
+        const localAudio = new window.LivekitClient.LocalAudioTrack(audioTrack);
+        await room.localParticipant.publishTrack(localAudio);
+        log('已发布麦克风音频');
+        publishMicBtn.disabled = true;
+      } catch (e) {
+        log('发布音频失败:', e.message || e);
+      }
+    };
+
+    leaveBtn.onclick = async () => {
+      try {
+        if (room) {
+          await room.disconnect();
+          room = null;
+          log('已离开房间');
+        }
+        connectBtn.disabled = false;
+        publishMicBtn.disabled = true;
+        leaveBtn.disabled = true;
+      } catch (e) {
+        log('离开失败:', e.message || e);
+      }
+    };
+  </script>
+</body>
+</html>

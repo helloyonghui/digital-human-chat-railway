@@ -1,0 +1,2 @@
+LIVEKIT_URL=wss://motabay.com/rtc LIVEKIT_API_KEY=APIi8ZGP6SSZJzC LIVEKIT_API_SECRET=wHXediXHus2Lq1atGuyBC7jU2gwvJ4H9j9xdATXWoOE LIVEKIT_ROOM=dh-stream \
+python3 server.py
