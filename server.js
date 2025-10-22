@@ -443,7 +443,7 @@ app.get('/roles/:roleId', (req, res) => {
 });
 
 // 静态文件服务（添加强制无缓存头）
-app.use('/static', express.static(path.join(__dirname), {
+app.use('/static', express.static(path.join(__dirname, 'static'), {
     maxAge: 0,
     etag: false,
     lastModified: false,
