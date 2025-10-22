@@ -1,0 +1,24 @@
+[build]
+  builder = "DOCKERFILE"
+
+[deploy]
+  healthcheckPath = "/health"
+  healthcheckTimeout = 300
+  restartPolicyType = "ON_FAILURE"
+  startCommand = "python server/cloud_gateway.py --host 0.0.0.0 --port $PORT --enable_https"
+
+[env]
+  # LiveKit配置 - 需要在Railway环境变量中设置
+  LIVEKIT_URL = "${{ LIVEKIT_URL }}"
+  LIVEKIT_API_KEY = "${{ LIVEKIT_API_KEY }}"
+  LIVEKIT_API_SECRET = "${{ LIVEKIT_API_SECRET }}"
+  LIVEKIT_ROOM = "dh-stream"
+  
+  # 模板配置
+  CLOUD_TEMPLATE_COVERS_DIR = "./server/template_covers"
+  CLOUD_TEMPLATE_JSON = "./server/config/template.json"
+  CLOUD_PROMPT_JSON = "./server/config/prompt.json"
+  
+  # Python环境
+  PYTHONPATH = "."
+  PORT = "${{ PORT }}"

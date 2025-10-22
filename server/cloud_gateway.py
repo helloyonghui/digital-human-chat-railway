@@ -2,6 +2,7 @@ import os
 import ssl
 import json
 import logging
+from typing import Union, Optional
 from aiohttp import web
 
 logging.basicConfig(level=logging.INFO)
@@ -26,7 +27,7 @@ class CloudTemplateRegistry:
             logger.warning(f"load json failed: {path}, {e}")
             return {}
 
-    def _resolve_cover(self, name: str) -> str | None:
+    def _resolve_cover(self, name: str) -> Optional[str]:
         # 在 covers_dir 下按 name.{jpg|png|jpeg|webp} 查找
         for ext in (".jpg", ".png", ".jpeg", ".webp"):
             p = os.path.join(self.covers_dir, f"{name}{ext}")
@@ -51,7 +52,7 @@ class CloudTemplateRegistry:
 
 # ------------------ HTTPS 可选 ------------------
 
-def build_ssl_context(enable_https: bool) -> ssl.SSLContext | None:
+def build_ssl_context(enable_https: bool) -> Optional[ssl.SSLContext]:
     if not enable_https:
         return None
     crt = os.getenv("HTTPS_CERT_FILE", os.path.join(os.path.dirname(__file__), "motabay.com.crt"))
@@ -189,7 +190,7 @@ async def main():
     import argparse
     parser = argparse.ArgumentParser(description="Cloud Gateway (strict)")
     parser.add_argument("--host", type=str, default="0.0.0.0")
-    parser.add_argument("--port", type=int, default=8021)
+    parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", 8021)))
     parser.add_argument("--enable_https", action="store_true")
     args = parser.parse_args()
 

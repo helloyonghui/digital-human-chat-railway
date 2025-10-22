@@ -34,21 +34,12 @@
         if (Array.isArray(data?.templates)) {
             templates = data.templates;
         } else if (data?.templates && typeof data.templates === 'object') {
-            // 将对象转换为数组，保留ID信息
-            templates = Object.entries(data.templates).map(([id, info]) => ({
-                ...info,
-                id: id,
-                templateId: id
-            }));
+            templates = Object.values(data.templates);
         } else if (Array.isArray(data)) {
             templates = data;
         } else if (data && typeof data === 'object') {
             // /templates 返回的字典：{ name: info, ... }
-            templates = Object.entries(data).map(([id, info]) => ({
-                ...info,
-                id: id,
-                templateId: id
-            }));
+            templates = Object.values(data);
         }
         return { templates, current };
     }
@@ -99,13 +90,12 @@
         }
 
         for (const t of items) {
-            const templateId = safeStr(t.templateId || t.id || t.name || t.template);
             const name = safeStr(t.name || t.template || t.id);
             const title = safeStr(t.title || t.display_name || name);
             const desc = safeStr(t.description || t.desc || '');
             const thumb = resolvePreview(t);
             const card = document.createElement('div');
-            card.className = 'tpl-card' + (templateId && templateId === currentTemplate ? ' current' : '');
+            card.className = 'tpl-card' + (name && name === currentTemplate ? ' current' : '');
 
             card.innerHTML = `
                 <div class="thumb">${thumb ? `<img src="${thumb}" alt="${title}"/>` : `<div class="no-thumb"></div>`}</div>
@@ -122,7 +112,7 @@
 
             // 点击卡片高亮当前
             card.addEventListener('click', () => {
-                setCurrentCard(card, templateId);
+                setCurrentCard(card, name);
             });
 
             playBtn.addEventListener('click', async (e) => {
@@ -130,18 +120,18 @@
                 try {
                     playBtn.disabled = true;
                     // 立即反馈：高亮并隐藏选择面板
-                    setCurrentCard(card, templateId);
+                    setCurrentCard(card, name);
                     hide();
                     // 立即启动播放（不等待后端切换完成）
                     if (options.onSelect && typeof options.onSelect === 'function') {
                         // 不 await，避免阻塞模板切换请求
-                        options.onSelect(templateId);
+                        options.onSelect(name);
                     }
                     // 异步通知后端切换模板（不阻塞前端跳转）
-                    fetch(`${window.location.origin}/templates/select`, {
+                    fetch('/templates/select', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ templateId: templateId })
+                        body: JSON.stringify({ template_name: name })
                     }).then(r => r.ok ? r : Promise.reject(new Error('切换失败')))
                       .catch(e => {
                           console.warn('[TemplateSelector] 后端模板切换失败', e);
@@ -163,14 +153,14 @@
     async function loadTemplates(){
         try {
             setLoading(true);
-            const resp = await fetch(`${window.location.origin}/templates`, { method: 'GET', cache: 'no-store' });
+            const resp = await fetch('/templates', { method: 'GET', cache: 'no-store' });
             const data = await resp.json();
             let { templates, current } = normalizeTemplatesPayload(data);
 
             // 若当前模板未提供，额外尝试获取 /templates/current
             if (!current) {
                 try {
-                    const r2 = await fetch(`${window.location.origin}/templates/current`, { method:'GET', cache:'no-store' });
+                    const r2 = await fetch('/templates/current', { method:'GET', cache:'no-store' });
                     if (r2.ok) {
                         const j2 = await r2.json();
                         current = j2?.current_template || current || null;

@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  # 数字人Web服务
+  digital-human-web:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - LIVEKIT_URL=wss://your-livekit-server.com
+      - LIVEKIT_API_KEY=your-api-key
+      - LIVEKIT_API_SECRET=your-api-secret
+      - LIVEKIT_ROOM=dh-stream
+      - CLOUD_TEMPLATE_COVERS_DIR=/app/server/template_covers
+      - CLOUD_TEMPLATE_JSON=/app/server/template.json
+      - CLOUD_PROMPT_JSON=/app/server/prompt.json
+    volumes:
+      - ./server/template_covers:/app/server/template_covers
+      - ./server/template.json:/app/server/template.json
+      - ./server/prompt.json:/app/server/prompt.json
+      - ./server/motabay.com.crt:/app/server/motabay.com.crt
+      - ./server/motabay.com.key:/app/server/motabay.com.key
+    restart: unless-stopped
+    networks:
+      - digital-human-network
+
+  # LiveKit服务器（可选，如果需要自建）
+  livekit:
+    image: livekit/livekit-server:latest
+    ports:
+      - "7880:7880"
+      - "7881:7881/udp"
+    environment:
+      - LIVEKIT_CONFIG=/etc/livekit.yaml
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml
+    restart: unless-stopped
+    networks:
+      - digital-human-network
+
+networks:
+  digital-human-network:
+    driver: bridge

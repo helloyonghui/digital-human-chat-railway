@@ -1,0 +1,31 @@
+INFO:cloud_web:云端Web服务器初始化:
+INFO:cloud_web:  LiveKit服务器: wss://101.42.242.213:7443
+INFO:cloud_web:  推理服务地址: http://localhost:8021
+INFO:cloud_web:  模板图片目录: /home/ubuntu/workerspace_2/template_covers
+INFO:cloud_web:  发现模板图片: 3 个文件
+INFO:cloud_web:    - kwn_003.jpg
+INFO:cloud_web:    - xinyao0319.jpg
+INFO:cloud_web:    - kwn_004.jpg
+INFO:cloud_web:模板图片服务: /home/ubuntu/workerspace_2/template_covers
+INFO:cloud_web:云端Web服务器路由配置完成:
+INFO:cloud_web:  / - 主页面
+INFO:cloud_web:  /lk/join - LiveKit令牌获取
+INFO:cloud_web:  /templates/* - 模板管理API代理
+INFO:cloud_web:  /template_covers/* - 模板图片静态服务
+INFO:cloud_web:  /static_cloud/* - 前端静态资源
+INFO:cloud_web:云端Web服务启动: https://0.0.0.0:8443
+INFO:cloud_web:可用路由:
+INFO:cloud_web:  / - 数字人对话主页面
+INFO:cloud_web:  /api/livekit/join - LiveKit令牌获取
+INFO:cloud_web:  /lk/join - LiveKit令牌获取（兼容路径）
+INFO:cloud_web:  /health - 健康检查
+INFO:cloud_web:  /static_cloud/* - 静态文件服务
+INFO:cloud_web:LiveKit配置: URL=wss://101.42.242.213:7443, Room=dh-stream
+INFO:aiohttp.access:125.120.135.54 [16/Oct/2025:18:17:06 +0800] "GET / HTTP/1.1" 200 4508 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0"
+INFO:aiohttp.access:125.120.135.54 [16/Oct/2025:18:17:06 +0800] "GET /static_cloud/styles.css HTTP/1.1" 200 237 "https://101.42.242.213:8443/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0"
+INFO:aiohttp.access:125.120.135.54 [16/Oct/2025:18:17:06 +0800] "POST /lk/stop HTTP/1.1" 404 173 "https://101.42.242.213:8443/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0"
+INFO:aiohttp.access:125.120.135.54 [16/Oct/2025:18:17:06 +0800] "GET /static_cloud/js/video_renderer.js HTTP/1.1" 200 243 "https://101.42.242.213:8443/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0"
+INFO:aiohttp.access:125.120.135.54 [16/Oct/2025:18:17:06 +0800] "GET /static_cloud/js/recorder/recorder.wav.min.js HTTP/1.1" 200 244 "https://101.42.242.213:8443/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0"
+INFO:aiohttp.access:125.120.135.54 [16/Oct/2025:18:17:07 +0800] "GET /static_cloud/js/template_selector.js HTTP/1.1" 200 243 "https://101.42.242.213:8443/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0"
+INFO:aiohttp.access:125.120.135.54 [16/Oct/2025:18:17:07 +0800] "GET /static_cloud/main.js HTTP/1.1" 200 244 "https://101.42.242.213:8443/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0"
+INFO:aiohttp.access:125.120.135.54 [16/Oct/2025:18:17:07 +0800] "GET /static_cloud/lib/livekit-client.umd.min.js HTTP/1.1" 200 246 "https://101.42.242.213:8443/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0"
